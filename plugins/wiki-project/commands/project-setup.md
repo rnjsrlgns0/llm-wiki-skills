@@ -32,7 +32,7 @@ Use Glob tool:
 
 ```
 Use Bash tool:
-- command: "mkdir -p project-wiki/<project>/{adrs,modules,glossary,runbooks,incidents,changelog,_inbox}"
+- command: "mkdir -p project-wiki/<project>/{adrs,modules,glossary,runbooks,incidents,changelog,entities,concepts,_inbox,_raw/{prs,issues,meetings,docs}}"
 ```
 
 ---
@@ -72,6 +72,12 @@ _아직 등록된 인시던트가 없습니다._
 
 ## Changelog
 _아직 등록된 변경 기록이 없습니다._
+
+## Entities
+_아직 등록된 엔티티가 없습니다._
+
+## Concepts
+_아직 등록된 개념이 없습니다._
 ```
 
 ### C-2. log.md
@@ -99,12 +105,21 @@ notes: 프로젝트 위키 초기화 완료
   ├── runbooks/
   ├── incidents/
   ├── changelog/
-  └── _inbox/
+  ├── entities/
+  ├── concepts/
+  ├── _inbox/
+  └── _raw/
+      ├── prs/
+      ├── issues/
+      ├── meetings/
+      └── docs/
 
 다음 단계:
 - ADR 작성: /project-ingest 로 아키텍처 결정 기록
 - 모듈 문서화: /project-ingest 로 주요 모듈 설명 추가
 - 용어 정의: /project-ingest 로 프로젝트 용어집 구축
+- 엔티티 등록: /project-ingest 로 도구/프레임워크/팀 기록
+- 개념 정의: /project-ingest 로 패턴/기법/아키텍처 스타일 기록
 ```
 
 ---

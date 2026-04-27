@@ -26,14 +26,16 @@ description: Use when the user says "위키 동기화", "project sync", "코드 
 
 ## 위키 페이지 타입
 
-| 타입        | 설명                        | 저장 위치       | 코드 변경 영향 가능성 |
-|-------------|----------------------------|-----------------|----------------------|
-| `module`    | 코드 컴포넌트 문서          | `modules/`      | 높음 (주요 대상)     |
-| `adr`       | 아키텍처 결정 기록          | `adrs/`         | 중간 (모순 감지)     |
-| `runbook`   | 운영 절차서                 | `runbooks/`     | 중간 (스크립트 변경) |
-| `glossary`  | 프로젝트 용어집             | `glossary/`     | 낮음                 |
-| `incident`  | 인시던트 기록               | `incidents/`    | 낮음                 |
-| `changelog` | 변경 기록 요약              | `changelog/`    | 낮음                 |
+| 타입        | 설명                                                              | 저장 위치       | 코드 변경 영향 가능성 |
+|-------------|------------------------------------------------------------------|-----------------|----------------------|
+| `module`    | 코드 컴포넌트 문서                                               | `modules/`      | 높음 (주요 대상)     |
+| `adr`       | 아키텍처 결정 기록                                               | `adrs/`         | 중간 (모순 감지)     |
+| `runbook`   | 운영 절차서                                                      | `runbooks/`     | 중간 (스크립트 변경) |
+| `glossary`  | 프로젝트 용어집                                                  | `glossary/`     | 낮음                 |
+| `incident`  | 인시던트 기록                                                    | `incidents/`    | 낮음                 |
+| `changelog` | 변경 기록 요약                                                   | `changelog/`    | 낮음                 |
+| `entity`    | 프로젝트 스코프 엔티티: 도구, 프레임워크, 팀, 사람               | `entities/`     | 중간 (도구/설정 변경) |
+| `concept`   | 프로젝트 스코프 개념: 패턴, 기법, 아키텍처 스타일               | `concepts/`     | 중간 (구현 변경)     |
 
 ---
 
@@ -46,7 +48,7 @@ description: Use when the user says "위키 동기화", "project sync", "코드 
 id: <slug>
 title: <title>
 project: <project-name>
-type: adr | module | glossary | runbook | incident | changelog
+type: adr | module | glossary | runbook | incident | changelog | entity | concept
 status: draft | active | deprecated | superseded
 tags: [...]
 refs:
@@ -99,12 +101,15 @@ git diff --name-only <base>..HEAD
 1. **본문 파일 경로 언급**: 위키 페이지 본문에 변경된 파일의 경로(또는 파일명)가 명시적으로 포함된 경우
 2. **refs.commits 교차**: 위키 페이지 frontmatter `refs.commits`에 포함된 커밋이 해당 변경과 연관된 경우
 3. **모듈 경로 포함**: `modules/` 페이지의 본문에 변경 파일이 속한 디렉토리 경로가 기술된 경우
+4. **엔티티 경로 포함**: `entities/` 페이지의 본문에 변경된 도구/프레임워크의 소스 코드 또는 설정 파일 경로가 기술된 경우 — 해당 entity 페이지가 영향을 받을 수 있음
+5. **개념 경로 포함**: `concepts/` 페이지의 본문에 변경된 파일이 구현하는 패턴이나 기법이 기술된 경우 — 해당 concept 페이지가 영향을 받을 수 있음
 
 **매핑 결과 구조**:
 ```
 {
   "src/auth/jwt.py": ["modules/auth-module", "adrs/adr-003-jwt-strategy"],
   "src/api/routes.py": ["modules/api-gateway"],
+  "src/infra/redis.py": ["entities/redis", "concepts/caching-strategy"],
   "src/utils/cache.py": []   ← 매핑 없음 (미문서화)
 }
 ```
@@ -145,6 +150,19 @@ ADR 모순 감지는 휴리스틱 기반이다. 코드 변경 파일 경로와 A
 |------------------------------------|----------------------------------------------------------|
 | 참조된 스크립트/CLI 도구가 변경됨  | `status: outdated` + `sync-note` 추가 → 자동 적용       |
 
+#### entity 페이지
+
+| 변경 유형                                        | 평가 결과                                                          |
+|--------------------------------------------------|--------------------------------------------------------------------|
+| entity가 참조하는 도구/프레임워크가 업그레이드되거나 변경됨 | `status: outdated` + `sync-note` 추가 → 자동 적용        |
+| entity가 참조하는 설정 파일이나 초기화 코드가 변경됨        | `sync-note` 추가 후 업데이트 제안 → 자동 적용             |
+
+#### concept 페이지
+
+| 변경 유형                                        | 평가 결과                                                          |
+|--------------------------------------------------|--------------------------------------------------------------------|
+| concept이 기술하는 패턴의 구현 코드가 크게 변경됨 | `status: outdated` + `sync-note` 추가 → 자동 적용                |
+
 #### glossary / incident / changelog 페이지
 
 - 코드 변경에 의한 직접 수정 없음
@@ -169,6 +187,8 @@ ADR 모순 감지는 휴리스틱 기반이다. 코드 변경 파일 경로와 A
 자동 적용 예정:
   - modules/auth-module.md → status: outdated, sync-note 추가
   - modules/api-gateway.md → 파일 경로 참조 업데이트 (src/api/v1/routes.py → src/api/v2/routes.py)
+  - entities/redis.md → status: outdated, sync-note 추가
+  - concepts/caching-strategy.md → status: outdated, sync-note 추가
 
 사용자 승인 필요:
   - modules/legacy-parser.md → status: deprecated (참조 파일 src/parser/old.py 삭제됨)
@@ -191,6 +211,12 @@ ADR 모순 감지는 휴리스틱 기반이다. 코드 변경 파일 경로와 A
 
 이 파일들에 대한 module 페이지 생성을 권장합니다.
 project-ingest 스킬로 module 페이지를 생성할 수 있습니다.
+
+미문서화 도구/프레임워크 (위키 entity 페이지 없음):
+  - src/infra/celery_app.py에서 Celery 도입이 감지되었으나 entity 페이지가 없습니다.
+
+미문서화 패턴/개념 (위키 concept 페이지 없음):
+  - src/core/circuit_breaker.py에서 Circuit Breaker 패턴 구현이 감지되었으나 concept 페이지가 없습니다.
 ```
 
 자동 생성하지 않는다. 보고만 한다.
@@ -210,6 +236,8 @@ affected_pages: N
   - deprecated: N
   - renamed_refs: N
   - adr_conflicts: N
+  - entity_outdated: N
+  - concept_outdated: N
 unmapped_files: N
 actions:
   - auto-fixed: <요약 (예: 3개 페이지 outdated 마킹, 1개 파일 경로 업데이트)>
@@ -262,20 +290,38 @@ project-wiki/<project>/ 존재 확인
 [Step 1] git diff 범위 사용자 확인 → 변경 파일 수집 및 분류
     │
     ▼
-[Step 2] 변경 파일 → wiki 페이지 매핑 탐색
+[Step 2] 변경 파일 → wiki 페이지 매핑 탐색 (modules / adrs / entities / concepts 포함)
     │
     ▼
-[Step 3] 각 위키 페이지 영향 평가 (module / adr / runbook 별 기준)
+[Step 3] 각 위키 페이지 영향 평가 (module / adr / runbook / entity / concept 별 기준)
     │
     ▼
 [Step 4] 자동 적용 실행 + 사용자 승인 항목 제시
     │
     ▼
-[Step 5] 미문서화 파일 보고 (제안만, 자동 생성 없음)
+[Step 5] 미문서화 파일 보고 (module 없음 / entity 없음 / concept 없음, 제안만)
     │
     ▼
 [Step 6] log.md append
     │
     ▼
 완료 요약 출력
+```
+
+---
+
+## 위키 디렉토리 구조 참조
+
+```
+project-wiki/<project>/
+├── modules/
+├── adrs/
+├── runbooks/
+├── glossary/
+├── incidents/
+├── changelog/
+├── entities/
+├── concepts/
+├── _raw/
+└── log.md
 ```

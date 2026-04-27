@@ -11,7 +11,7 @@ description: Use when the user asks questions about project context, architectur
 
 ---
 
-## 1. Page Types (6 types)
+## 1. Page Types (8 types)
 
 | Type | Description | Directory |
 |------|-------------|-----------|
@@ -21,6 +21,8 @@ description: Use when the user asks questions about project context, architectur
 | `runbook` | Operational procedure — 배포·장애 대응·유지보수 절차 | `runbooks/` |
 | `incident` | Incident record — 장애 경위·원인·후속 조치 | `incidents/` |
 | `changelog` | Release change summary — 버전별 변경 사항 요약 | `changelog/` |
+| `entity` | Project-scoped entities: tools, frameworks, teams, people | `entities/` |
+| `concept` | Project-scoped concepts: patterns, techniques, architectural styles | `concepts/` |
 
 ---
 
@@ -33,7 +35,7 @@ description: Use when the user asks questions about project context, architectur
 id: <slug>                          # 고유 식별자 (파일명 기반 kebab-case)
 title: <제목>                        # 사람이 읽을 수 있는 제목
 project: <project-name>             # 소속 프로젝트명 (project-wiki/ 하위 디렉토리명과 일치)
-type: adr | module | glossary | runbook | incident | changelog
+type: adr | module | glossary | runbook | incident | changelog | entity | concept
 status: draft | active | deprecated | superseded
 tags: [<namespace/slug>, ...]       # 네임스페이스 포함 태그 (예: auth/jwt, infra/db)
 refs:
@@ -53,7 +55,7 @@ updated: YYYY-MM-DD
 | `id` | 필수 | 파일명(확장자 제외)과 동일. 변경 불가 |
 | `title` | 필수 | 한글/영문 모두 허용 |
 | `project` | 필수 | `project-wiki/<project>/` 디렉토리명과 정확히 일치 |
-| `type` | 필수 | 위 6종 중 하나 |
+| `type` | 필수 | 위 8종 중 하나 |
 | `status` | 필수 | `draft` → `active` → `deprecated`/`superseded` |
 | `tags` | 권장 | `namespace/slug` 형식. 최소 1개 권장 |
 | `refs` | 선택 | 없으면 빈 객체 `{}` |
@@ -75,6 +77,9 @@ project-wiki/<project-name>/
 ├── runbooks/         # 운영 절차서
 ├── incidents/        # 인시던트 기록
 ├── changelog/        # 릴리즈 변경 기록
+├── entities/          ← Project-scoped entities
+├── concepts/          ← Project-scoped concepts
+├── _raw/              ← Immutable source archive
 └── _inbox/           # 미처리 원문 보관 (ingest 대기)
 ```
 
@@ -145,7 +150,11 @@ index.md에서 수집한 페이지 id들을 출발점으로 교차 참조를 순
 탐색 규칙:
 1. 각 페이지의 frontmatter `related` 필드 → 연결된 페이지 id 수집
 2. 본문의 [[wikilink]] → 연결된 페이지 id 수집
-3. ADR → module → incident 체인 우선 순회
+3. ADR → module → entity → concept 체인 우선 순회
+   - ADR에서 참조된 entity/concept 페이지를 따라간다
+   - module 페이지에서 참조된 entity(tools used) 페이지를 따라간다
+   - entity 페이지에서 참조된 concept 페이지를 따라간다
+   - 탐색 체인: ADR → module → entity → concept (최대 4단계 깊이)
 4. 탐색 깊이: 최대 3홉 (index → 1차 페이지 → 2차 페이지 → 3차 페이지)
 5. 이미 읽은 페이지는 재방문하지 않음 (순환 참조 방지)
 ```
@@ -154,8 +163,8 @@ index.md에서 수집한 페이지 id들을 출발점으로 교차 참조를 순
 
 | 질문 유형 | 우선 탐색 경로 |
 |-----------|--------------|
-| "왜 이렇게 설계했어?" | `adrs/` → `related` module |
-| "이 모듈 어떻게 동작해?" | `modules/` → `related` adr, runbook |
+| "왜 이렇게 설계했어?" | `adrs/` → `related` module → `related` entity/concept |
+| "이 모듈 어떻게 동작해?" | `modules/` → `related` adr, runbook → `related` entity |
 | "최근 변경 이력" | `changelog/` → `related` adr |
 | "이 용어 무슨 뜻?" | `glossary/` |
 | "장애 대응 어떻게 해?" | `runbooks/` → `related` incident |
@@ -192,6 +201,9 @@ index.md에서 수집한 페이지 id들을 출발점으로 교차 참조를 순
 - ADR이 결정 X를 기술하지만 실제 코드는 Y를 구현하고 있음
 - 두 위키 페이지가 서로 상충하는 정보를 기술하고 있음
 - `status: active`이지만 `superseded`된 ADR을 참조하고 있음
+- Entity 페이지의 도구/프레임워크 설명이 현재 코드 상태와 불일치함
+- Concept 페이지의 패턴/기법 설명이 실제 구현 방식과 다름
+- `_raw/` 원본 소스가 존재하는 경우, `_raw/` 원문과 위키 페이지 요약 간 내용 불일치
 
 **공백 (Gap)**:
 - index.md가 참조하는 모듈 페이지가 존재하지 않음
