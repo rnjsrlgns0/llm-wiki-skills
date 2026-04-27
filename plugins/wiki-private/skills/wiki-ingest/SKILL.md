@@ -36,7 +36,11 @@ Karpathy LLM-wiki 패턴(https://gist.github.com/karpathy/442a6bf555914893e9891c
 - 경계 모호 시 `wiki/<domain>/index_<domain>.md` 상단 "범위/경계" 섹션 확인
 - 판정 애매하면 `wiki/<domain>/_inbox/` 에 임시 배치 후 lint에서 재분류
 
-### 4. source-summary 페이지 작성 (L2 · Wiki)
+### 4. 페이지 생성 (source-summary + entity + concept + 교차참조)
+
+**이 Step은 4개 하위 단계로 구성되며, 4-a만으로는 미완성이다. 4-a~4-d 전체를 완료해야 1건의 ingest가 완료된다.**
+
+#### 4-a. source-summary 페이지 작성 (L2 · Wiki)
 - 경로: `wiki/<domain>/sources/<slug>.md`
 - `type: source-summary`
 - frontmatter 필수 필드: `id`(=파일명) / `title` / `domain` / `type` / `status: active` / `tags` / `sources` (원본 경로·URL 리스트) / `created` / `updated`
@@ -47,28 +51,44 @@ Karpathy LLM-wiki 패턴(https://gist.github.com/karpathy/442a6bf555914893e9891c
   - **비판점 / 한계**
   - **파생 아이디어 · 내 코멘트**
 
-### 5. 영향받는 entity·concept 업데이트 (L2)
-**Karpathy 핵심 원칙: 하나의 소스가 10~15개 페이지를 수정할 수 있다.**
+#### 4-b. entity 추출 및 페이지 생성/업데이트
 
-소스에서 언급된 모든 고유명사(인물·제품·도구·회사·프로젝트)와 추상 개념(패턴·기법·이론) 각각에 대해:
+source-summary 본문에서 언급된 **모든 고유명사**(인물, 제품, 도구, 회사, 프로젝트)를 스캔한다.
 
-- **기존 페이지 존재** → 본문에 신규 사실 추가, `updated` 필드 갱신
-  - 새 소스가 기존 주장과 **모순**되면 → 명시적으로 기록 ("새 소스 X는 이전 Y 주장을 뒤집음" 또는 "강화함"). 숨기지 않는다.
-- **기존 페이지 부재** → 새 페이지 생성
-  - entity: `wiki/<domain>/entities/<slug>.md`
-  - concept: `wiki/<domain>/concepts/<slug>.md`
-  - 타입 판별 순서: ① 원본 1건 대응 → `source-summary` ② 고유명사·식별 대상 → `entity` ③ 2개 이상을 가로지름 → `comparison` ④ 추상 개념 → `concept` ⑤ 해당 없음 → `note` (`_inbox/`)
+각 고유명사에 대해:
+- 기존 entity 페이지 있으면 → 신규 사실 추가 + `updated` 갱신
+  - 새 소스가 기존 주장과 **모순**되면 → 명시적으로 기록 ("새 소스 X는 이전 Y 주장을 뒤집음")
+- 없으면 → 새 entity 페이지 생성 (`wiki/<domain>/entities/<slug>.md`)
 
-### 6. 양방향 교차참조
-- source-summary → 언급된 모든 entity/concept 페이지로 `[[wikilink]]`
-- entity/concept → 본 source-summary로 역 wikilink (근거로 인용)
+이 단계를 생략하면 source-summary 생성도 미완성으로 간주한다.
 
-### 7. index_<domain>.md 갱신 (L3)
+#### 4-c. concept 추출 및 페이지 생성/업데이트
+
+source-summary 본문에서 언급된 **모든 추상 개념**(패턴, 기법, 이론)을 스캔한다.
+
+각 추상 개념에 대해:
+- 기존 concept 페이지 있으면 → 업데이트
+- 없으면 → 새 concept 페이지 생성 (`wiki/<domain>/concepts/<slug>.md`)
+
+이 단계를 생략하면 source-summary 생성도 미완성으로 간주한다.
+
+#### 4-d. 양방향 교차참조
+
+4-a~c에서 생성/업데이트한 모든 페이지 간 양방향 링크:
+- source-summary → entity/concept: `[[wikilink]]`
+- entity/concept → source-summary: 역링크 (근거로 인용)
+- entity ↔ concept 간: 관련 있으면 상호 링크
+
+**4-a만 완료하고 4-b~d를 건너뛰는 것은 절차 위반이다.**
+
+> Karpathy 핵심 원칙: *"one source can modify 10~15 pages"* — 4-a(source-summary 1개)만으로 끝나면 이 원칙을 위반한 것이다.
+
+### 5. index_<domain>.md 갱신 (L3)
 신규 페이지 각각에 대해:
 - 해당 도메인의 카테고리 섹션(엔티티/개념/소스 요약/비교 등)에 링크 + 한 줄 요약 추가
 - 기존 페이지 대규모 수정 시 index 요약도 갱신 검토
 
-### 8. log_<domain>.md append (L3) — **포맷 엄수**
+### 6. log_<domain>.md append (L3) — **포맷 엄수**
 Karpathy 원칙: 접두사 일관성 → unix 파싱 가능해야 한다.
 
 ```markdown
@@ -84,12 +104,12 @@ notes: <모순·결정·특이사항 1~3줄>
 - 접두사 `## [YYYY-MM-DD HH:MM] ingest | ` **절대 변형 금지**
 - 시간은 현재 로컬 시각
 
-### 9. 크로스 도메인 영향 확인
+### 7. 크로스 도메인 영향 확인
 - 본 소스가 타 도메인 페이지와도 연관되면(예: `ai-llm` 소스지만 `work/entities/cubig-syntitan` 에도 영향):
   - 해당 도메인 페이지 업데이트
   - **해당 도메인의 `log_<그 도메인>.md`에도 ingest 이벤트 append**
 
-### 10. 보고
+### 8. 보고
 - 변경된 페이지 수 요약
 - 10개 초과 수정 시 → 목록 제시 + 사용자 확인 권장
 - 신규 질문·데이터 갭 발견 시 → `log` 하단에 `lint-candidate:` 로 메모
@@ -109,14 +129,13 @@ notes: <모순·결정·특이사항 1~3줄>
 - 확정되지 않은 도메인의 `sources/`에 저장 (애매하면 `_inbox/`)
 - 한 ingest에서 10개 초과 페이지 **조용히** 수정 (반드시 보고)
 - **wiki 작업(ingest/lint/query)은 반드시 해당 skill을 호출하여 실행**. Write/Edit로 파일만 생성하는 것은 skill 사용이 아님
-- **skill 로드 후 Step 1~10 전체를 따를 것**. source-summary 생성(Step 4)만으로 끝내지 말고, entity/concept 추출(Step 5)·교차참조(Step 6)·index(Step 7)·log(Step 8)·크로스 도메인(Step 9)까지 완료해야 1회 ingest 종료. 속도를 위해 절차 생략 금지
+- **skill 로드 후 Step 1~8 전체를 따를 것**. source-summary 생성(Step 4-a)만으로 끝내지 말고, entity 추출(Step 4-b)·concept 추출(Step 4-c)·교차참조(Step 4-d)·index(Step 5)·log(Step 6)·크로스 도메인(Step 7)까지 완료해야 1회 ingest 종료. 속도를 위해 절차 생략 금지
+- **Step 4의 4-a만 완료하고 4-b~d를 생략하는 것은 ingest 미완료이다**
 
 ## Verification checklist (ingest 완료 후 자기 점검)
 
 - [ ] raw/ 에 원본 배치됨 (또는 URL 메타 생성)
-- [ ] `wiki/<domain>/sources/<slug>.md` 생성, frontmatter 필수 필드 완비
-- [ ] 언급된 entity/concept 페이지 모두 업데이트 또는 신규 생성
-- [ ] 양방향 wikilink 연결
+- [ ] Step 4 전체 완료 (4-a source-summary + 4-b entity + 4-c concept + 4-d 양방향 교차참조) — 4-a만으로는 미완성
 - [ ] `index_<domain>.md` 에 신규 페이지 등재
 - [ ] `log_<domain>.md` 에 규정 포맷으로 append
 - [ ] 크로스 도메인 영향 확인됨
@@ -384,26 +403,32 @@ updated: 2026-04-13
    - URL이면 `raw/articles/<slug>.md`에 메타데이터(URL, 수집일, 제목)만 저장. 본문 복사는 선택
 2. **소스 읽기 및 도메인 판정**
    - 전문을 읽고 10개 도메인 중 1차 도메인 결정 (경계 모호 시 `index_<domain>.md` 범위 섹션 참조)
-3. **source-summary 페이지 작성**
-   - 경로: `wiki/<domain>/sources/<slug>.md`
-   - 타입: `source-summary`
-   - frontmatter `sources:`에 원본 경로·URL 기재
-   - 구성: 핵심 주장 / 방법 / 결과 / 비판점 / 파생 아이디어
-4. **영향받는 entity · concept 업데이트**
-   - 소스에서 언급된 고유명사/개념 각각에 대해:
-     - 기존 entity/concept 페이지가 있으면 → 해당 페이지의 본문·관련 링크·`updated` 필드 갱신, 본 소스에서 얻은 신규 사실 추가
-     - 없으면 → 새 entity/concept 페이지 생성 (경로 규칙 준수)
-   - 한 소스로 3~15개 기존 페이지가 영향받을 수 있음 (정상)
-5. **교차 참조 추가**
-   - 본 source-summary에서 관련 entity·concept로 wikilink
-   - 관련 entity·concept 페이지에서도 본 source-summary로 역 wikilink
-6. **index_<domain>.md 갱신**
+3. **페이지 생성 (source-summary + entity + concept + 교차참조) — 3-a~3-d 전체 완료 필수**
+   - **3-a. source-summary 페이지 작성**
+     - 경로: `wiki/<domain>/sources/<slug>.md`
+     - 타입: `source-summary`
+     - frontmatter `sources:`에 원본 경로·URL 기재
+     - 구성: 핵심 주장 / 방법 / 결과 / 비판점 / 파생 아이디어
+   - **3-b. entity 추출 및 페이지 생성/업데이트**
+     - 고유명사(인물·제품·도구·회사·프로젝트) 각각에 대해:
+       - 기존 페이지 있으면 → 신규 사실 추가 + `updated` 갱신, 모순 시 명시적 기록
+       - 없으면 → `wiki/<domain>/entities/<slug>.md` 생성
+     - 한 소스로 3~15개 기존 페이지가 영향받을 수 있음 (정상)
+   - **3-c. concept 추출 및 페이지 생성/업데이트**
+     - 추상 개념(패턴·기법·이론) 각각에 대해:
+       - 기존 페이지 있으면 → 업데이트
+       - 없으면 → `wiki/<domain>/concepts/<slug>.md` 생성
+   - **3-d. 양방향 교차참조**
+     - source-summary → entity/concept: `[[wikilink]]`
+     - entity/concept → source-summary: 역링크 (근거로 인용)
+     - entity ↔ concept 간: 관련 있으면 상호 링크
+4. **index_<domain>.md 갱신**
    - 신규 페이지 링크와 한 줄 요약 추가
    - 기존 카테고리 섹션에 배치 (엔티티/개념/소스 요약 등)
-7. **log_<domain>.md 기록**
+5. **log_<domain>.md 기록**
    - 형식: `## [YYYY-MM-DD HH:MM] ingest | <title>` 접두사 고정
    - 본문: `source:` 원본 경로, `updated:` 영향받은 페이지 목록
-8. **크로스 도메인 영향 확인**
+6. **크로스 도메인 영향 확인**
    - 본 소스가 타 도메인(예: `ai-llm`이지만 `work/entities/cubig-syntitan`에도 영향) 페이지와 연관되면 해당 도메인 페이지도 업데이트 + 해당 `log_<그 도메인>.md`에도 `ingest` 이벤트 append
 
 ### 배치 vs 개별
