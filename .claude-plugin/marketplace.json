@@ -1,0 +1,45 @@
+{
+  "name": "wiki-marketplace",
+  "owner": {
+    "name": "hun03241"
+  },
+  "metadata": {
+    "description": "LLM Wiki 플러그인 마켓플레이스 — Karpathy LLM-wiki 패턴 기반",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "wiki-private",
+      "description": "옵시디언 기반 개인 지식관리 LLM wiki — ingest/query/lint/migrate",
+      "source": "./plugins/wiki-private",
+      "strict": true,
+      "skills": [
+        "./skills/wiki-ingest",
+        "./skills/wiki-lint",
+        "./skills/wiki-query",
+        "./skills/wiki-migrate"
+      ],
+      "commands": [
+        "./commands/full-ingest.md",
+        "./commands/domain-review.md",
+        "./commands/migration-batch.md"
+      ]
+    },
+    {
+      "name": "wiki-project",
+      "description": "개발 프로젝트 컨텍스트 관리 LLM wiki — ADR/모듈/런북/인시던트",
+      "source": "./plugins/wiki-project",
+      "strict": true,
+      "skills": [
+        "./skills/project-ingest",
+        "./skills/project-query",
+        "./skills/project-lint",
+        "./skills/project-sync"
+      ],
+      "commands": [
+        "./commands/project-setup.md",
+        "./commands/project-review.md"
+      ]
+    }
+  ]
+}
